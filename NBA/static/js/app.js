@@ -324,6 +324,60 @@ function table_volume(player_id) {
     })
 };
 
+//Function for game log information
+function table_next(player_id) {
+
+    //Append to gamelog table and clear current output
+    var tbody = d3.selectAll('tbody')
+    var game_body = d3.select("#next-body")
+    game_body.html('')
+
+    //Access API through player_id input
+    var url = `/api/next_game/${player_id}`
+    d3.json(url).then(data=>{
+        
+        //For each game add a row
+        data.forEach(function(game){
+            var row = game_body.append('tr');
+
+            //For each value add a cell and input the value as text
+            Object.entries(game).forEach(([key, value]) => {
+                var cell = row.append("td");
+                cell.text(value);
+        })
+        
+        })
+
+    })
+};
+
+//Function for game log information
+function table_last(player_id) {
+
+    //Append to gamelog table and clear current output
+    var tbody = d3.selectAll('tbody')
+    var game_body = d3.select("#last-body")
+    game_body.html('')
+
+    //Access API through player_id input
+    var url = `/api/last_game/${player_id}`
+    d3.json(url).then(data=>{
+        
+        //For each game add a row
+        data.forEach(function(game){
+            var row = game_body.append('tr');
+
+            //For each value add a cell and input the value as text
+            Object.entries(game).forEach(([key, value]) => {
+                var cell = row.append("td");
+                cell.text(value);
+        })
+        
+        })
+
+    })
+};
+
 
 //Function for game log information
 function table_gamelog(player_id) {
@@ -359,6 +413,8 @@ function init() {
     //Start the page up on 2544 - Lebron James
     table_info(2544);
     table_stats(2544);
+    table_next(2544);
+    table_last(2544);
     shotchart(2544);
     table_volume(2544);
     table_gamelog(2544);
@@ -410,6 +466,8 @@ function init() {
                     //Run functions on input value using the value as player_id
                     table_info(player_value);
                     table_stats(player_value);
+                    table_next(player_value);
+                    table_last(player_value);
                     shotchart(player_value);
                     table_volume(player_value);
                     table_gamelog(player_value);

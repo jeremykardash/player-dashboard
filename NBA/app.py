@@ -42,36 +42,21 @@ app = Flask(__name__)
 #app.config['SQLALCHEMY_DATABASE_URL'] = "postgres://gvuvmkxy:Z62u_yZyL3sTjlr-XDy0eUcBrAy9ucOU@ziggy.db.elephantsql.com:5432/gvuvmkxy"
 #db = SQLAlchemy(app)
 
-engine = create_engine("postgres://gvuvmkxy:Z62u_yZyL3sTjlr-XDy0eUcBrAy9ucOU@ziggy.db.elephantsql.com:5432/gvuvmkxy")
+engine = create_engine("postgres://eskbntsz:4rZCsWbTEBAnuRThZm1j9ZH6XOwI7A59@ziggy.db.elephantsql.com:5432/eskbntsz")
 
 Base = automap_base()
 Base.prepare(engine, reflect=True)
 
 #Tables for queries
-combine = Base.classes.combine
 players = Base.classes.players
-stats = Base.classes.stats
 teams = Base.classes.teams
-salaries = Base.classes.salaries
-players_team = Base.classes.players_teams
 
 # create route that renders index.html template
 @app.route("/")
 def home():
     return render_template("index.html")
 
-@app.route("/player")
-def playerpage():
-    return render_template("player.html")
-
 # Service Routes
-@app.route("/api/main")
-def main():
-    session = Session(engine)
-    data = session.query(combine.player_id, stats.player_name, stats.pos).filter(combine.player_id == stats.player_id).all()
-    session.close()
-    return jsonify(data)
-
 @app.route("/api/teams")
 def teamsroute():
     session = Session(engine)
@@ -90,7 +75,7 @@ def teamsroute():
 @app.route("/api/players")
 def playersroute():
     session = Session(engine)
-    results = session.query(players_team.player_id, players_team.team_id, players_team.player_name).all()
+    results = session.query(players.PERSON_ID, players.TEAM_ID, players.DISPLAY_FIRST_LAST).all()
     session.close()
     players_team_list = []
     for player_id, team_id, name in results:
@@ -124,7 +109,7 @@ def playerinfo(id=None):
 
 @app.route("/api/seasonstats/<id>")
 def seasonstats(id=None):
-    splits = player.Splits(player_id=id, season="2018-19").overall()
+    splits = player.Splits(player_id=id, season="2020-21").overall()
     splits = splits[['W', 'L','MIN', 'FGM',
        'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT',
        'OREB', 'DREB', 'REB', 'AST',  'STL', 'BLK','TOV', 'PF',
@@ -156,9 +141,10 @@ def seasonstats(id=None):
         stats.append(game)
     
     return jsonify(stats)
+
 @app.route("/api/gamelog/<id>")
 def gamelogs(id=None):
-    game_log = player.GameLogs(player_id=id, season="2018-19").logs()
+    game_log = player.GameLogs(player_id=id, season="2020-21").logs()
     game_log = game_log[['GAME_DATE', 'MATCHUP', 'WL',
        'MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA',
        'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF',
@@ -195,7 +181,7 @@ def gamelogs(id=None):
 
 @app.route("/api/volume/<player_id>")
 def volume(player_id=None):
-    shot_charts = shot_chart.ShotChart(player_id=player_id, season="2018-19").shot_chart()
+    shot_charts = shot_chart.ShotChart(player_id=player_id, season="2020-21").shot_chart()
 
     df = pd.DataFrame(shot_charts["SHOT_TYPE"].value_counts())
     df['Volume'] = (df["SHOT_TYPE"]/df["SHOT_TYPE"].sum()).astype(float).map('{:,.2%}'.format)
@@ -240,7 +226,7 @@ def volume(player_id=None):
 @app.route("/api/shotchart/<player_id>")
 def shotcharts(player_id=None):
     
-    shot_charts = shot_chart.ShotChart(player_id=player_id, season="2018-19").shot_chart()
+    shot_charts = shot_chart.ShotChart(player_id=player_id, season="2020-21").shot_chart()
     shot_charts["MADE_MISS"] = ['green' if x == 1 else 'red' for x in shot_charts['SHOT_MADE_FLAG']]
     df = shot_charts
     
@@ -270,52 +256,118 @@ def shotcharts(player_id=None):
 
     return jsonify(allshots)
 
-@app.route("/api/stats")
-def bubbleroute():
-    session = Session(engine)
+@app.route("/api/next_game/<player_id>")
+def next(player_id=None):
+    next_game_id = player.Career(player_id=player_id).next_game()
+    next_game_id["Team"] = next_game_id["VS_TEAM_CITY"] +" " + next_game_id["VS_TEAM_NICKNAME"]
+    df = player.OpponentSplits(player_id=player_id).by_team()
+    df["PRA"] = df["PTS"] + df["REB"] + df["AST"]
+    df["PA"] = df["PTS"]  + df["AST"]
+    df["PR"] = df["PTS"] + df["REB"]
+    df["AR"] = df["AST"] + df["REB"]
+    df["STL/BLK"] = df["STL"] + df["BLK"]
+    df = df[["GROUP_VALUE", "GP", 'MIN', 'FGM',
+           'FGA', 'FG3M', 'FG3A', 'FTM', 'FTA',
+           'PTS', 'REB', 'OREB', 'AST', "PRA", "PA", "PR", "AR", 'STL', 'BLK', 'STL/BLK']]
+    
+    table = []
+    for index, row in df.iterrows():
+        if (row["GROUP_VALUE"] == next_game_id["Team"][0]):
+            data = {}
+            data["aTeam"] = row["GROUP_VALUE"]
+            data['bGP'] = row["GP"]
+            data["cMIN"] = row["MIN"]
+            data["dFGM"] = row["FGM"]
+            data["eFGA"] = row["FGA"]
+            data["fFG3M"] = row["FG3M"]
+            data["gFG3A"] = row["FG3A"]
+            data["hFTM"] = row["FTM"]
+            data["iFTA"] = row["FTA"]
+            data["jPTS"] = row["PTS"]
+            data["kREB"] = row["REB"]
+            data["lOREB"] = row["OREB"]
+            data["mAST"] = row["AST"]
+            data["nPRA"] = row["PRA"]
+            data["oPA"] = row["PA"]
+            data["pPR"] = row["PR"]
+            data["qAR"] = row["AR"]
+            data["rSTL"] = row["STL"]
+            data["sBLK"] = row["BLK"]
+            data["tSTL/BLK"] = row["STL/BLK"]
+            table.append(data)
+        else:
+            pass
+    
+    return jsonify(table)
 
-    sel = [stats.player_id, stats.player_name, salaries.salary, stats.pos,
-    stats.TwoP_m, stats.ThreeP_m, stats.mp, stats.fg, stats.fga, stats.fg_percent,	
-    stats.ThreeP_a,	stats.ThreeP_percent, stats.TwoP_a,	stats.TwoP_percent,	stats.efg_percent,	
-    stats.ft, stats.fta, stats.ft_percent, stats.pts, stats.orb, stats.drb, stats.trb, stats.ast,
-     stats.stl, stats.blk, stats.tov]
+@app.route("/api/last_game/<player_id>")
+def last_x(player_id=None):
+    df_5 = player.LastNGamesSplits(player_id=player_id, season="2020-21").last_5()
+    df_5["PRA"] = df_5["PTS"] + df_5["REB"] + df_5["AST"]
+    df_5["PA"] = df_5["PTS"]  + df_5["AST"]
+    df_5["PR"] = df_5["PTS"] + df_5["REB"]
+    df_5["AR"] = df_5["AST"] + df_5["REB"]
+    df_5["STL/BLK"] = df_5["STL"] + df_5["BLK"]
+    df_5 = df_5[["GROUP_SET", 'MIN', 'FGM',
+           'FGA', 'FG3M', 'FG3A', 'FTM', 'FTA',
+           'PTS', 'REB', 'OREB', 'AST', "PRA", "PA", "PR", "AR", 'STL', 'BLK', 'STL/BLK']]
+    df_5 = df_5.rename(columns={"GROUP_SET": "Split"})
+    df_5 = pd.DataFrame(df_5)
+    
+    df_10 = player.LastNGamesSplits(player_id=player_id, season="2020-21").last_10()
+    df_10["PRA"] = df_10["PTS"] + df_10["REB"] + df_10["AST"]
+    df_10["PA"] = df_10["PTS"]  + df_10["AST"]
+    df_10["PR"] = df_10["PTS"] + df_10["REB"]
+    df_10["AR"] = df_10["AST"] + df_10["REB"]
+    df_10["STL/BLK"] = df_10["STL"] + df_10["BLK"]
+    df_10 = df_10[["GROUP_SET", 'MIN', 'FGM',
+           'FGA', 'FG3M', 'FG3A', 'FTM', 'FTA',
+           'PTS', 'REB', 'OREB', 'AST', "PRA", "PA", "PR", "AR", 'STL', 'BLK', 'STL/BLK']]
+    df_10 = df_10.rename(columns={"GROUP_SET": "Split"})
+    df_10 = pd.DataFrame(df_10)
+    
+    concat = pd.concat([df_5, df_10])
+    
+    df_20 = player.LastNGamesSplits(player_id=player_id, season="2020-21").last_20()
+    df_20["PRA"] = df_20["PTS"] + df_20["REB"] + df_20["AST"]
+    df_20["PA"] = df_20["PTS"]  + df_20["AST"]
+    df_20["PR"] = df_20["PTS"] + df_20["REB"]
+    df_20["AR"] = df_20["AST"] + df_20["REB"]
+    df_20["STL/BLK"] = df_20["STL"] + df_20["BLK"]
+    df_20 = df_20[["GROUP_SET", 'MIN', 'FGM',
+           'FGA', 'FG3M', 'FG3A', 'FTM', 'FTA',
+           'PTS', 'REB', 'OREB', 'AST', "PRA", "PA", "PR", "AR", 'STL', 'BLK', 'STL/BLK']]
+    df_20 = df_20.rename(columns={"GROUP_SET": "Split"})
+    df_20 = pd.DataFrame(df_20)
+    
+    final = pd.concat([concat, df_20])
+    
+    all_data = []
+    for index, row in final.iterrows():
+        data = {}
+        data["aSplit"] = row["Split"]
+        data["bMIN"] = row["MIN"]
+        data["cFGM"] = row["FGM"]
+        data["dFGA"] = row["FGA"]
+        data["daFG3M"] = row["FG3M"]
+        data["eFG3A"] = row["FG3A"]
+        data["fFTM"] = row["FTM"]
+        data["gFTA"] = row["FTA"]
+        data["hPTS"] = row["PTS"]
+        data["iREB"] = row["REB"]
+        data["jOREB"] = row["OREB"]
+        data["kAST"] = row["AST"]
+        data["lPRA"] = row["PRA"]
+        data["mPA"] = row["PA"]
+        data["nPR"] = row["PR"]
+        data["oAR"] = row["AR"]
+        data["pSTL"] = row["STL"]
+        data["qBLK"] = row["BLK"]
+        data["rSTL/BLK"] = row["STL/BLK"]
+        all_data.append(data)
 
-    results = session.query(*sel).filter(salaries.player_id == stats.player_id).all()
-   
-    session.close()
+    return jsonify(all_data)
 
-    all_stats = []
-    for result in results:
-        stats_dict ={}
-        stats_dict["Player_id"] = result[0]
-        stats_dict["Player_name"] = result[1]
-        stats_dict["Salary"] = result[2]
-        stats_dict["Position"] = result[3]
-        stats_dict["2PT Made"] = result[4]
-        stats_dict["3PT Made"] = result[5]
-        stats_dict["Minutes Played"] = result[6]
-        stats_dict["Field-Goal Made"] = result[7]
-        stats_dict["Field-Goal Attempts"] = result[8]
-        stats_dict["Field-Goal %"] = result[9]
-        stats_dict["3PT Attempts"] = result[10]
-        stats_dict["3PT %"] = result[11]
-        stats_dict["2PT Attempts"] = result[12]
-        stats_dict["2PT %"] = result[13]
-        stats_dict["Effective Field-Goal %"] = result[14]
-        stats_dict["FT Made"] = result[15]
-        stats_dict["FT Attemps"] = result[16]
-        stats_dict["FT %"] = result[17]
-        stats_dict["Points"] = result[18]
-        stats_dict["Offensive Rebounds"] = result[19]
-        stats_dict["Defensive Rebounds"] = result[20]
-        stats_dict["Total Rebounds"] = result[21]
-        stats_dict["Assists"] = result[22]
-        stats_dict["Steals"] = result[23]
-        stats_dict["Blocks"] = result[24]
-        stats_dict["Turnovers"] = result[25]
-        all_stats.append(stats_dict)
-   
-    return jsonify(all_stats)
 
 if __name__ == "__main__":
     app.run(debug=True)
