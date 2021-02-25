@@ -228,6 +228,7 @@ def shotcharts(player_id=None):
     
     shot_charts = shot_chart.ShotChart(player_id=player_id, season="2020-21").shot_chart()
     shot_charts["MADE_MISS"] = ['green' if x == 1 else 'red' for x in shot_charts['SHOT_MADE_FLAG']]
+    shot_charts["MADE_MISS_SHOT"] = ['Made' if x == 1 else 'Missed' for x in shot_charts['SHOT_MADE_FLAG']]
     df = shot_charts
     
     allshots = []
@@ -247,7 +248,8 @@ def shotcharts(player_id=None):
         shot["shot_type"] = row["SHOT_TYPE"]
         shot["shot_distance"] = row["SHOT_DISTANCE"]
         shot["shot_made"] = row["SHOT_MADE_FLAG"]
-        shot["class"] = row["MADE_MISS"]            
+        shot["class"] = row["MADE_MISS"]           
+        shot["result"] = row["MADE_MISS_SHOT"]
         shot["x"] = row["LOC_X"]
         shot["y"] = row["LOC_Y"]
         shot["home"] = row["HTM"]
@@ -287,13 +289,13 @@ def next(player_id=None):
             data["kREB"] = row["REB"]
             data["lOREB"] = row["OREB"]
             data["mAST"] = row["AST"]
-            data["nPRA"] = row["PRA"]
-            data["oPA"] = row["PA"]
-            data["pPR"] = row["PR"]
-            data["qAR"] = row["AR"]
+            data["nPRA"] = round(row["PRA"],3)
+            data["oPA"] = round(row["PA"], 3)
+            data["pPR"] = round(row["PR"], 3)
+            data["qAR"] = round(row["AR"], 3)
             data["rSTL"] = row["STL"]
             data["sBLK"] = row["BLK"]
-            data["tSTL/BLK"] = row["STL/BLK"]
+            data["tSTL/BLK"] = round(row["STL/BLK"], 3)
             table.append(data)
         else:
             pass
@@ -357,13 +359,13 @@ def last_x(player_id=None):
         data["iREB"] = row["REB"]
         data["jOREB"] = row["OREB"]
         data["kAST"] = row["AST"]
-        data["lPRA"] = row["PRA"]
-        data["mPA"] = row["PA"]
-        data["nPR"] = row["PR"]
-        data["oAR"] = row["AR"]
+        data["lPRA"] = round(row["PRA"], 3)
+        data["mPA"] = round(row["PA"], 3)
+        data["nPR"] = round(row["PR"], 3)
+        data["oAR"] = round(row["AR"], 3)
         data["pSTL"] = row["STL"]
         data["qBLK"] = row["BLK"]
-        data["rSTL/BLK"] = row["STL/BLK"]
+        data["rSTL/BLK"] = round(row["STL/BLK"],3)
         all_data.append(data)
 
     return jsonify(all_data)

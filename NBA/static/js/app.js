@@ -256,7 +256,7 @@ function shotchart(player_id) {
             .append("circle")
             .attr("cx", (d => xLinearScale(d.x*(-1))))
             .attr("cy", (d => height - yLinearScale(d.y)))
-            .attr("r", "5")
+            .attr("r", "7")
             .attr("stroke", "grey")
             .attr("fill", "orange")
             .attr("opacity", "1")
@@ -269,7 +269,7 @@ function shotchart(player_id) {
             .html(function(d) {
               return (`<strong>${d.away} @ ${d.home} Q${d.quarter} ${d.minutes}:${d.seconds}</strong><br>
                     ${d.day}/${d.month}/${d.year} <br>
-                    ${d.action_type}<br>
+                    ${d.result} ${d.action_type}<br>
                     ${d.shot_distance}ft. ${d.shot_type}`);
             });
       
