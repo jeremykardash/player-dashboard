@@ -50,6 +50,7 @@ Base.prepare(engine, reflect=True)
 #Tables for queries
 players = Base.classes.players
 teams = Base.classes.teams
+defense = Base.classes.defense
 
 # create route that renders index.html template
 @app.route("/")
@@ -257,6 +258,32 @@ def shotcharts(player_id=None):
         allshots.append(shot)
 
     return jsonify(allshots)
+
+@app.route("/api/defense/<player_id>")
+def defense_team(player_id=None):
+    next_game_id = player.Career(player_id=player_id).next_game()
+    session = Session(engine)
+    results = session.query(defense.Team, defense.abb, defense.DEF_EFF, defense.EFG, defense.TwoP, defense.ThreeP, defense.ThreePA, defense.REB, defense.DEFREB, defense.AST, defense.PACE).all()
+    session.close()
+    table = []
+    for team, abb, def_eff, efg, two, three, threeA, reb, defReb, ast, pace in results:
+        if (abb == next_game_id["VS_TEAM_ABBREVIATION"][0]):
+            data = {}
+            data["aTeam"] = team
+            data["bDEF_EFF"] = def_eff
+            data["cEFG"] = efg
+            data["d2P"] = two
+            data["e3P"] = three
+            data["f3PA"] =threeA
+            data["gREB"] = reb
+            data["hDEF_REB"] = defReb
+            data["iAST"] = ast
+            data["jPACE"] = pace
+            table.append(data)
+        else:
+            pass
+    
+    return jsonify(table)
 
 @app.route("/api/next_game/<player_id>")
 def next(player_id=None):

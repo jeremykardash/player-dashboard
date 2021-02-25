@@ -324,6 +324,42 @@ function table_volume(player_id) {
     })
 };
 
+//Function for Volume and FG% table    
+function table_defense(player_id) {
+
+    //Sleect the specific table
+    var tbody = d3.selectAll('tbody')
+    var body = d3.select("#defense-body")
+
+    //Clear
+    body.html('')
+
+    //Access API through player_id
+    var url = `api/defense/${player_id}`
+
+    d3.json(url).then(data=>{
+
+        //Iterate through the data for each spot on the court and append as a row
+        data.forEach(function(team){
+
+            //Row for each location
+            var row = body.append('tr');
+
+            //Use object.entries and iterate through each value to input
+            Object.entries(team).forEach(([key, value]) => {
+
+                //Cell for each value
+                var cell = row.append("td");
+
+                //Input value
+                cell.text(value);
+        })
+        
+        })
+
+    })
+};
+
 //Function for game log information
 function table_next(player_id) {
 
@@ -414,6 +450,7 @@ function init() {
     table_info(2544);
     table_stats(2544);
     table_next(2544);
+    table_defense(2544);
     table_last(2544);
     shotchart(2544);
     table_volume(2544);
@@ -467,6 +504,7 @@ function init() {
                     table_info(player_value);
                     table_stats(player_value);
                     table_next(player_value);
+                    table_defense(player_value);
                     table_last(player_value);
                     shotchart(player_value);
                     table_volume(player_value);
