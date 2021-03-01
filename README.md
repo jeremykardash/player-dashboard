@@ -4,8 +4,8 @@ This code is a derivative of a project from class. For the NBA2019, my responsib
 
 This player dashboard first uses python to access all the data through the API. Additionally, a PostgeSQL database is set up to initiate the dropdown menus and to hold the defensive statistics. Through Javascript, HTML, and CSS I am able to display the dashboard to look like this:
 
-![top half](Images/top-half.png)
-![bottom half](Images/bottom-half.png)
+![top half](images/top-half.png)
+![bottom half](images/bottom-half.png)
 
 The idea of the player dashboard is for player prop betting. As an amateur gambler, I was trying to find a way to use the data analysis and visualization techniques to give myself an advantage. The greatest advantage anyone can have is information that can be utilized to create informed decisions. The player dashboard aims to have just about everything you’d need to place a bet. Some of these aspects are:
 Next game opponent defensive stats
